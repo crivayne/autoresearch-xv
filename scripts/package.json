@@ -1,0 +1,6 @@
+{
+  "name": "ai-preset-worklog-scripts",
+  "private": true,
+  "type": "commonjs",
+  "description": "worklog.js를 CommonJS로 고정하는 스코프 힌트다 — 호스트 package.json의 \"type\": \"module\"이 .js를 ESM으로 만들면 require()가 첫 명령부터 깨지므로, 이 파일이 scripts/ 안에서 그 설정을 덮는다. 이 폴더를 npm 패키지로 만들려는 게 아니다(name+private은 호스트 workspaces glob에 걸려도 npm install이 깨지지 않게 하는 방어)."
+}

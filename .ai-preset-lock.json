@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "files": {
+    ".ai-preset.json": "4afb9b16fe46dd04e6ad5662f544d3a5def83ba2d2a41b27f01a5831cd58e0e9",
+    "AGENTS.md": "8929ee9f208bfc74c5a0b7d117097e6efb167983a2b7f2583be836b1f63d9257",
+    "CLAUDE.md": "c88d66f9d0f54fbb31640e9490bb275e844263b5889f76359360df5c654e610e",
+    "scripts/package.json": "ac9e873d6600c9355cef2a6851dc4be5b5054f372cae2e658b009a00dba62620",
+    "scripts/preset-manifest.js": "7be6058b965c0dd25d7d8e51b366036b3b808cc69f49a1adcf7f4567500162f8",
+    "scripts/worklog.js": "53b49dbf6507ab1226eed273a7c440ff4ad01c63a6fe1e722daac419d0e7fae4"
+  }
+}
