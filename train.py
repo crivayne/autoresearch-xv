@@ -488,6 +488,7 @@ def get_bf16_peak_flops(device_name):
     table = {
         "H100": 989.5e12,
         "AMD Radeon RX 9070 XT": 97.3e12,  # RDNA4 64CU WMMA, dense BF16 (spec, TODO verify)
+        "RTX 3060 Ti": 64.8e12,            # GA104 tensor, dense BF16 (approx, TODO verify) - must precede "RTX 3060"
         "RTX 3060": 51.2e12,               # GA106 tensor, dense BF16 (approx, TODO verify)
         "RTX 5060": 0.0,                   # TODO: fill before PC3 runs
     }
