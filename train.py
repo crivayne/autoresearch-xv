@@ -30,7 +30,8 @@ if not IS_ROCM and os.environ.get("AR_FORCE_SDPA") != "1":
         fa3 = get_kernel(repo).flash_attn_interface
     except Exception as e:
         print(f"FA3 kernel unavailable ({e!r}); falling back to SDPA")
-print(f"Attention backend: {'fa3' if fa3 is not None else 'sdpa'} (ROCm: {IS_ROCM})")
+SDPA_FP32 = os.environ.get("AR_SDPA_FP32") == "1"  # diagnostic: run SDPA math in fp32
+print(f"Attention backend: {'fa3' if fa3 is not None else 'sdpa'} (ROCm: {IS_ROCM}, sdpa_fp32: {SDPA_FP32})")
 
 from prepare import MAX_SEQ_LEN, TIME_BUDGET, Tokenizer, make_dataloader, evaluate_bpb
 
@@ -104,9 +105,12 @@ class CausalSelfAttention(nn.Module):
         else:
             # SDPA fallback: sliding window unsupported -> full causal attention
             # (known degradation vs FA3 SSSL banded pattern; recorded in docs/ai/DECISIONS.md)
-            y = F.scaled_dot_product_attention(
-                q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2), is_causal=True
-            ).transpose(1, 2)
+            qt, kt, vt = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
+            if SDPA_FP32:
+                y = F.scaled_dot_product_attention(qt.float(), kt.float(), vt.float(), is_causal=True).to(q.dtype)
+            else:
+                y = F.scaled_dot_product_attention(qt, kt, vt, is_causal=True)
+            y = y.transpose(1, 2)
         y = y.contiguous().view(B, T, -1)
         y = self.c_proj(y)
         return y
@@ -482,6 +486,10 @@ torch.cuda.manual_seed(42)
 torch.set_float32_matmul_precision("high")
 device = torch.device("cuda")
 autocast_ctx = torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16)
+if os.environ.get("AR_NO_AUTOCAST") == "1":  # diagnostic: full fp32 forward (embeddings stay bf16)
+    from contextlib import nullcontext
+    autocast_ctx = nullcontext()
+    print("autocast disabled (fp32 run) via AR_NO_AUTOCAST=1")
 
 def get_bf16_peak_flops(device_name):
     """Dense BF16 peak FLOPS per device, for MFU. Spec-sheet values; refine as measured."""
