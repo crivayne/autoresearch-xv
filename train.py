@@ -32,6 +32,7 @@ if not IS_ROCM and os.environ.get("AR_FORCE_SDPA") != "1":
         print(f"FA3 kernel unavailable ({e!r}); falling back to SDPA")
 SDPA_FP32 = os.environ.get("AR_SDPA_FP32") == "1"  # diagnostic: run SDPA math in fp32
 NO_AUTOCAST = os.environ.get("AR_NO_AUTOCAST") == "1"  # diagnostic: full fp32 forward
+MUON_FP32 = os.environ.get("AR_MUON_FP32") == "1"  # diagnostic: Muon orthogonalization in fp32 (default bf16)
 print(f"Attention backend: {'fa3' if fa3 is not None else 'sdpa'} (ROCm: {IS_ROCM}, sdpa_fp32: {SDPA_FP32})")
 
 from prepare import MAX_SEQ_LEN, TIME_BUDGET, Tokenizer, make_dataloader, evaluate_bpb
@@ -350,7 +351,7 @@ def muon_step_fused(stacked_grads, stacked_params, momentum_buffer, second_momen
     momentum_buffer.lerp_(stacked_grads, 1 - momentum)
     g = stacked_grads.lerp_(momentum_buffer, momentum)
     # Polar express orthogonalization
-    X = g.bfloat16()
+    X = g.float() if MUON_FP32 else g.bfloat16()
     X = X / (X.norm(dim=(-2, -1), keepdim=True) * 1.02 + 1e-6)
     if g.size(-2) > g.size(-1):
         for a, b, c in polar_express_coeffs[:ns_steps]:
@@ -484,8 +485,11 @@ DEVICE_BATCH_SIZE = int(os.environ.get("AR_DEVICE_BATCH_SIZE", "32"))  # per-dev
 # ---------------------------------------------------------------------------
 
 t_start = time.time()
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
+SEED = int(os.environ.get("AR_SEED", "42"))  # diagnostic: vary seed to measure run variance
+if SEED != 42:
+    print(f"seed: {SEED} (via AR_SEED)")
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
 torch.set_float32_matmul_precision("high")
 if os.environ.get("AR_FULL_REDUCTION") == "1":  # diagnostic: force full-precision accumulation in bf16/fp16 matmuls
     torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = False
