@@ -31,6 +31,7 @@ if not IS_ROCM and os.environ.get("AR_FORCE_SDPA") != "1":
     except Exception as e:
         print(f"FA3 kernel unavailable ({e!r}); falling back to SDPA")
 SDPA_FP32 = os.environ.get("AR_SDPA_FP32") == "1"  # diagnostic: run SDPA math in fp32
+NO_AUTOCAST = os.environ.get("AR_NO_AUTOCAST") == "1"  # diagnostic: full fp32 forward
 print(f"Attention backend: {'fa3' if fa3 is not None else 'sdpa'} (ROCm: {IS_ROCM}, sdpa_fp32: {SDPA_FP32})")
 
 from prepare import MAX_SEQ_LEN, TIME_BUDGET, Tokenizer, make_dataloader, evaluate_bpb
@@ -291,6 +292,8 @@ class GPT(nn.Module):
         cos_sin = self.cos[:, :T], self.sin[:, :T]
 
         x = self.transformer.wte(idx)
+        if NO_AUTOCAST:
+            x = x.float()  # embeddings are stored bf16; promote for fp32 matmuls
         x = norm(x)
         x0 = x
         for i, block in enumerate(self.transformer.h):
@@ -484,9 +487,17 @@ t_start = time.time()
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 torch.set_float32_matmul_precision("high")
+if os.environ.get("AR_FULL_REDUCTION") == "1":  # diagnostic: force full-precision accumulation in bf16/fp16 matmuls
+    torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = False
+    torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
+    print("reduced-precision matmul reduction disabled via AR_FULL_REDUCTION=1")
+_blas = os.environ.get("AR_BLAS")
+if _blas:  # diagnostic: "cublas" (rocBLAS on ROCm) | "cublaslt" (hipBLASLt) | "ck"
+    torch.backends.cuda.preferred_blas_library(_blas)
+    print(f"preferred blas library set via AR_BLAS={_blas}")
 device = torch.device("cuda")
 autocast_ctx = torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16)
-if os.environ.get("AR_NO_AUTOCAST") == "1":  # diagnostic: full fp32 forward (embeddings stay bf16)
+if NO_AUTOCAST:
     from contextlib import nullcontext
     autocast_ctx = nullcontext()
     print("autocast disabled (fp32 run) via AR_NO_AUTOCAST=1")
