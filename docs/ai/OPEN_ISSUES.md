@@ -34,7 +34,8 @@
   - 시드 분산 측정(PC1, 시드 42/43/123): val_bpb σ≈0.02, step10 σ≈0.08, step20 σ≈0.06 → **벤더 격차(bpb 0.18~0.22)는 ~10σ, 시드 노이즈 아님**
   - 전체 fp32(autocast off)는 양 벤더 모두 개선하나 fp32끼리도 격차 잔존(step10: 7.09 vs 6.42) → 단일 연산 정밀도가 아닌 구조적 차이
   - 한계: PC1 내부 A/B는 "PC1 전 경로 공통 결함"(예: 특정 op backward가 모든 구성에서 동일하게 부정확)을 배제 못함
-- 다음 확인(갱신): ① 고정 가중치·고정 배치 1스텝 기울기 덤프를 양 장비에서 CPU fp64 기준과 비교하는 연산별 진단 스크립트 ② Linux ROCm 동일 런으로 Windows ROCm 커널 한정 여부 판별
+- **판별 완료(2026-09-02): 범인 = Windows ROCm 7.2.1 SDK 커널 라이브러리 전반.** WSL(Linux ROCm 스택, 같은 GPU·시드·데이터)에서 step5 7.69/step10 6.74로 NVIDIA(8.17/7.02)보다도 우수 — Windows 네이티브(8.11/7.25)만 열세. Windows에서 `AR_BLAS=cublas` 무변화로 hipBLASLt 단독 범인설은 반증. 런타임 노브로 우회 불가 → 품질 비교·효율화는 Linux 스택 한정 (듀얼부팅 이행). 업스트림 보고 후보
+- 파생 이슈: WSL에서 hipBLASLt `HIPBLAS_STATUS_INTERNAL_ERROR`(rocBLAS 폴백), WSL 실효 성능 ~764 tok/s로 실용 불가
 - 항목: 동일 커밋·조건(SDPA eager bs8, seed 42)에서 9070 XT가 3060 Ti 대비 스텝별 손실 하강이 체계적으로 느림. step 0~5는 근사 일치(9.01 동일 출발) → step 10부터 벌어짐(step 20: 6.41 vs 5.93, step 44: 5.81 vs 5.06). 결과적으로 PC1이 1.55배 토큰을 쓰고도 val_bpb 열세(1.9225 vs 1.7422)
 - 관련 파일: train.py (norm/SDPA/muon_step_fused의 bf16 경로), 로그는 로컬 기록 저장소
 - 현재 판단: 시간 예산 고정으로 LR/WD 스케줄이 스텝축에서 다른 효과가 섞여 있으나, lrm=1.00 구간에서 이미 벌어지므로 스케줄만으로 설명 부족. ROCm 쪽 연산 정밀도(SDPA backward, rms_norm, bf16 축적) 의심
