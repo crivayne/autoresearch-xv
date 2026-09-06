@@ -40,7 +40,8 @@ node scripts/worklog.js check
 | prepare.py | green | 2026-08-30, 11 shards + vocab 8192 |
 | train.py eager (Windows) | green* | 2026-08-30 bs16: 1.8637 / ~102K / MFU 25.4%. *수렴 품질 결함 확인(Issue 2) — 품질 비교에 사용 금지 |
 | train.py eager (Linux) | green | 2026-09-06 **품질 기준선 bs8**: val_bpb 1.7047 / ~101K / MFU 25.3% |
-| train.py compile (Linux) | green | 2026-09-06 **성능 기준선 bs16**: val_bpb 1.7181 / ~161K / **MFU 39.96%** / peak 6.3GB |
+| train.py compile (Linux) | green | 2026-09-06 bs16: 1.7181 / ~161K / MFU 40.0% / 6.3GB |
+| **표준 레시피 (Linux)** | green | 2026-09-06 **compile+TunableOp+bs32**: val_bpb **1.5039** / ~190K / **MFU 47.3%** / 12.6GB — MI308X eager(1.5208/161K) 추월. max-autotune은 기본 모드 crash(`-no-cudagraphs` 필요), 이득 없음 |
 | train.py compile (Windows) | red | Triton 부재, 양 벤더 공통 (Issue 1) |
 
 ## Stale Server 체크
