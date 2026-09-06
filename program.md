@@ -2,6 +2,20 @@
 
 This is an experiment to have the LLM do its own research.
 
+## Platform (this fork — read first)
+
+This is the cross-vendor fork running on **AMD RX 9070 XT (RDNA4, 16GB) + ROCm, Ubuntu 24.04**.
+
+- **NEVER use `uv run` / `uv sync`** — it would replace the ROCm torch build with a CUDA one and break everything. Always use the venv python directly: `~/venvs/rocm721/bin/python`
+- **Standard launch command** (established recipe: torch.compile default mode + TunableOp; DEVICE_BATCH_SIZE default is already 32):
+  `PYTORCH_TUNABLEOP_ENABLED=1 ~/venvs/rocm721/bin/python train.py > run.log 2>&1`
+- Current baseline to beat (this recipe, 5-min budget): **val_bpb 1.5039**, ~190K tok/s, MFU 47.3%, peak 12.6GB
+- VRAM budget: 16GB physical. Peak must stay under ~15GB — exceeding VRAM silently spills to host RAM and destroys throughput (observed: 3x slowdown), so treat a large VRAM increase as a de-facto failure even if it doesn't crash
+- Env knobs available in train.py (AR_*): `AR_DEVICE_BATCH_SIZE`, `AR_NO_COMPILE`, `AR_COMPILE_MODE`, `AR_FORCE_SDPA`, `AR_SDPA_FP32`, `AR_NO_AUTOCAST`, `AR_MUON_FP32`, `AR_FULL_REDUCTION`, `AR_BLAS`, `AR_SEED` — prefer editing train.py constants for experiments, but these are fine for quick probes
+- `AR_COMPILE_MODE=max-autotune` crashes (CUDAGraphs conflict); `max-autotune-no-cudagraphs` works but gains nothing — don't bother
+- Attention runs via SDPA fallback (FA3 kernels are NVIDIA-only here); sliding window (SSSL) is currently ignored → full causal
+- Experiment commits are allowed ONLY on `autoresearch/<tag>` branches (repo policy: docs/ai/DECISIONS.md). Never commit to master
+
 ## Setup
 
 To set up a new experiment, work with the user to:
@@ -12,7 +26,7 @@ To set up a new experiment, work with the user to:
    - `README.md` — repository context.
    - `prepare.py` — fixed constants, data prep, tokenizer, dataloader, evaluation. Do not modify.
    - `train.py` — the file you modify. Model architecture, optimizer, training loop.
-4. **Verify data exists**: Check that `~/.cache/autoresearch/` contains data shards and a tokenizer. If not, tell the human to run `uv run prepare.py`.
+4. **Verify data exists**: Check that `~/.cache/autoresearch/` contains data shards and a tokenizer. If not, tell the human to run `~/venvs/rocm721/bin/python prepare.py`.
 5. **Initialize results.tsv**: Create `results.tsv` with just the header row. The baseline will be recorded after the first run.
 6. **Confirm and go**: Confirm setup looks good.
 
@@ -20,7 +34,7 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 
-Each experiment runs on a single GPU. The training script runs for a **fixed time budget of 5 minutes** (wall clock training time, excluding startup/compilation). You launch it simply as: `uv run train.py`.
+Each experiment runs on a single GPU. The training script runs for a **fixed time budget of 5 minutes** (wall clock training time, excluding startup/compilation). You launch it with the standard command from the Platform section (venv python + TunableOp — never `uv run`).
 
 **What you CAN do:**
 - Modify `train.py` — this is the only file you edit. Everything is fair game: model architecture, optimizer, hyperparameters, training loop, batch size, model size, etc.
@@ -96,7 +110,7 @@ LOOP FOREVER:
 1. Look at the git state: the current branch/commit we're on
 2. Tune `train.py` with an experimental idea by directly hacking the code.
 3. git commit
-4. Run the experiment: `uv run train.py > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context)
+4. Run the experiment: `PYTORCH_TUNABLEOP_ENABLED=1 ~/venvs/rocm721/bin/python train.py > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context)
 5. Read out the results: `grep "^val_bpb:\|^peak_vram_mb:" run.log`
 6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
