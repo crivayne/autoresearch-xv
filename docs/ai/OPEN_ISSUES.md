@@ -18,7 +18,7 @@
 
 ## Open Issue 1. Windows에서 torch.compile 불가 — 양 벤더 공통 (Triton 부재)
 
-- 상태: blocked (Windows 한정)
+- 상태: **resolved-by-platform (2026-09-06)** — Linux 네이티브(Ubuntu 24.04 + Triton 3.5.1+rocm7.2.1)에서 compile 성공: bs16 기준 MFU 25.2→39.96%, ~161K tok/s, peak VRAM 12.0→6.3GB. Windows 자체는 여전히 불가(하단 기록 유지)
 - 갱신(2026-08-30): **NVIDIA(3060 Ti, cu128 휠)에서도 동일 확인** — `torch._inductor.exc.TritonMissing`. PyTorch Windows 휠은 벤더 불문 Triton 미동봉. Windows 비교는 양쪽 eager로 공평, compile 축 측정은 Linux/WSL2 필요. NVIDIA는 커뮤니티 `triton-windows` 패키지 시도 여지 있음
 - 항목: torch.compile(Inductor) 실행 시 `ModuleNotFoundError: No module named 'triton'` (Inductor GEMM 튜닝이 triton.runtime.driver 요구). repo.radeon.com rocm-rel-7.2.1 Windows 릴리스에 Triton 휠 미포함 확인 (2026-08-30, 휠 6종뿐)
 - 관련 파일: train.py (`_maybe_compile`, `AR_NO_COMPILE`), 실행 로그는 로컬 기록 저장소에 보관
@@ -27,7 +27,7 @@
 
 ## Open Issue 2. ROCm eager의 스텝별 수렴 열세 (수치 정밀도 의심)
 
-- 상태: tracking — **우선순위 높음**
+- 상태: **closed (2026-09-06)** — 네이티브 Linux에서 완전 해소 확인: eager bs8 val_bpb 1.7047(속도 동일 ~101K)로 NVIDIA(1.7422)보다 우수. 범인 = Windows ROCm 7.2.1 SDK 커널 수치 품질(업스트림 보고 후보). 이하 진단 과정 기록 보존
 - 갱신(2026-08-30): PC1 동일 조건 재실행으로 **체계적 차이 확정** — 런 간 val_bpb 차 0.003(1.9225→1.9192, 스텝 손실 소수 3자리 일치) vs 벤더 간 차 0.18 (분산의 60배). 진단 노브 추가: `AR_SDPA_FP32=1`(어텐션만 fp32), `AR_NO_AUTOCAST=1`(전체 fp32)
 - 갱신(2026-08-31) 진단 결과 종합:
   - 무죄 확정: 토크나이저/데이터(해시 일치, 로더 결정적), 초기화 RNG(동일 수열, 말단 비트만 차이), 어텐션(fp32화 무변화), matmul 누적 플래그(무변화, no-op 가능성), Muon 직교화(fp32화 무변화)

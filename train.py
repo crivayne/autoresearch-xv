@@ -569,7 +569,12 @@ optimizer = model.setup_optimizer(
 if os.environ.get("AR_NO_COMPILE") == "1":
     print("torch.compile disabled via AR_NO_COMPILE=1")
 else:
-    model = torch.compile(model, dynamic=False)
+    _mode = os.environ.get("AR_COMPILE_MODE")  # e.g. max-autotune, reduce-overhead
+    if _mode:
+        print(f"torch.compile mode: {_mode}")
+        model = torch.compile(model, dynamic=False, mode=_mode)
+    else:
+        model = torch.compile(model, dynamic=False)
 
 train_loader = make_dataloader(tokenizer, DEVICE_BATCH_SIZE, MAX_SEQ_LEN, "train")
 x, y, epoch = next(train_loader)  # prefetch first batch

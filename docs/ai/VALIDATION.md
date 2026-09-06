@@ -38,8 +38,10 @@ node scripts/worklog.js check
 | --- | --- | --- |
 | 환경(torch+gfx1201) | green | 2026-08-30, is_available True, matmul OK |
 | prepare.py | green | 2026-08-30, 11 shards + vocab 8192 |
-| train.py eager | green | 2026-08-30 **베이스라인 bs16**: val_bpb 1.8637 / ~102K tok/s / MFU 25.42% / peak 12.0GB. (bs32: 스필로 MFU 9.0%, bs8: 동속·bpb 1.9225) |
-| train.py compile | red | 2026-08-30, Windows Triton 부재 (Open Issue 1) |
+| train.py eager (Windows) | green* | 2026-08-30 bs16: 1.8637 / ~102K / MFU 25.4%. *수렴 품질 결함 확인(Issue 2) — 품질 비교에 사용 금지 |
+| train.py eager (Linux) | green | 2026-09-06 **품질 기준선 bs8**: val_bpb 1.7047 / ~101K / MFU 25.3% |
+| train.py compile (Linux) | green | 2026-09-06 **성능 기준선 bs16**: val_bpb 1.7181 / ~161K / **MFU 39.96%** / peak 6.3GB |
+| train.py compile (Windows) | red | Triton 부재, 양 벤더 공통 (Issue 1) |
 
 ## Stale Server 체크
 
