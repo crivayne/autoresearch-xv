@@ -9,14 +9,14 @@
 
 ## 다음 시작점
 
-- 상태: `<ready|blocked|none>`
-- 작업: `<next-work>`
-- 이유: `<why-now>`
-- 첫 확인: `<first-check>`
+- 상태: `ready`
+- 작업: `업스트림 결함 리포트 — ROCm 7.2.1 Windows SDK 커널 수치 품질 (minimal repro 정리 + 보고서 작성)`
+- 이유: `Open Issue 2 root cause 확정, PC1 듀얼부팅이 동일 GPU 최소 재현 A/B 리그로 현존, 버전 현행(7.2.1) 시한성`
+- 첫 확인: `OPEN_ISSUES.md Open Issue 2 판별 완료 근거 (WSL vs Windows-native step5/10 대조, AR_BLAS 반증)`
 
 ## 차단 요인
 
-- `<blockers-or-none>`
+- `없음 (PC2 compile 공정 비교는 Open Issue 1로 별도 blocked)`
 
 ## 마지막 인계
 

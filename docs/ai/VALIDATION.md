@@ -42,6 +42,7 @@ node scripts/worklog.js check
 | train.py eager (Linux) | green | 2026-09-06 **품질 기준선 bs8**: val_bpb 1.7047 / ~101K / MFU 25.3% |
 | train.py compile (Linux) | green | 2026-09-06 bs16: 1.7181 / ~161K / MFU 40.0% / 6.3GB |
 | **표준 레시피 (Linux)** | green | 2026-09-06 **compile+TunableOp+bs32**: val_bpb **1.5039** / ~190K / **MFU 47.3%** / 12.6GB — MI308X eager(1.5208/161K) 추월. max-autotune은 기본 모드 crash(`-no-cudagraphs` 필요), 이득 없음 |
+| **예산 특화 축 (Linux)** | green | 2026-09-09 **자동 루프 최고**: depth4/width512/batch64/total 2^17 → val_bpb **1.1177** / MFU ~48.9% / ~12.3GB. 5분 예산 특화(스텝수 최적화), 크로스 벤더 비교 미사용 (DECISIONS 2026-09-09) |
 | train.py compile (Windows) | red | Triton 부재, 양 벤더 공통 (Issue 1) |
 
 ## Stale Server 체크
